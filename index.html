@@ -514,8 +514,11 @@ const ov=document.createElement('div'); ov.className='login-ov';
 const toon=h=>{ov.innerHTML=`<div class="login-box"><div class="eyebrow">Radiologie</div><h1>Wachtwissel</h1>${h}</div>`; ov.hidden=false; if(!ov.isConnected) document.body.append(ov)};
 async function start(fout){
   let env;
-  try{const r=await fetch('data.enc?t='+Date.now(),{cache:'no-store'}); if(!r.ok) throw 0; env=await r.json()}
-  catch(e){toon('<p>Er staan nog geen roostergegevens klaar. Probeer later opnieuw.</p>'); return}
+  // eerst rechtstreeks uit de repository (hangt niet af van de publicatie door GitHub Pages), anders de gepubliceerde kopie
+  const m=location.hostname.match(/^([^.]+)\.github\.io$/), repo=(location.pathname.split('/').filter(Boolean)[0]||'');
+  const bronnen=(m&&repo?[`https://raw.githubusercontent.com/${m[1]}/${repo}/main/data.enc?t=${Date.now()}`]:[]).concat(['data.enc?t='+Date.now()]);
+  for(const u of bronnen){try{const r=await fetch(u,{cache:'no-store'}); if(!r.ok) continue; env=await r.json(); break}catch(e){}}
+  if(!env){toon('<p>Er staan nog geen roostergegevens klaar. Probeer later opnieuw.</p>'); return}
   let pw=''; try{pw=localStorage.getItem(KEY)||''}catch(e){}
   const vraag=msg=>{toon(`<p>${msg||'Geef het wachtwoord dat je van je collega kreeg.'}</p><form id="pwF" class="bar" style="gap:8px;flex-wrap:wrap"><input id="pwI" type="password" autocomplete="current-password" aria-label="Wachtwoord" style="flex:1;min-width:12em"><button class="btn primary">Openen</button></form>`);
     const f=document.getElementById('pwF'); document.getElementById('pwI').focus(); f.onsubmit=e=>{e.preventDefault(); probeer(document.getElementById('pwI').value,true)}};
