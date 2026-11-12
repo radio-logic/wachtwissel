@@ -350,6 +350,10 @@ body.wisselonly header .bar>*:not(#thema){display:none!important}
 .iklbl select{font-size:1.05rem;padding:6px 10px;min-width:7em}
 .eb>*{min-width:0}
 .vwacht{box-sizing:border-box;max-width:100%}
+.wzrij{cursor:pointer}
+.wzrij:hover,.wzrij:focus-visible{border-color:var(--accent);outline:none}
+body.wisselonly #cnav{display:none!important}
+body.wisselonly{padding-bottom:0!important}
 
 </style>
 <style>
@@ -3629,7 +3633,7 @@ function renderWissel(){
   if(!wz.res&&wz.datum) wz.res=zoekWissels(wz.p,wz.datum,wz.venster,wz.zelfde);
   const r=wz.res;
   let vw=''; if(inV.length) vw=`<div class="vwacht"><h4 class="lbl" style="margin:0">${collega&&wz.p===mijnIni?'Jouw wachten':'Wachten van '+esc(wz.p)} tijdens verlof (${inV.length})</h4><p class="muted" style="margin:0;font-size:.85rem">Deze wachten vallen in goedgekeurd verlof, of in het weekend rond een verlofweek. Zoek een ruil en spreek die af met je collega.</p>
-    <div class="plist">${inV.map(([s,a])=>`<div class="prow${s===wz.datum?' on':''}"><div><b>${esc(fmtLang(s))}</b><span>${esc(wn(a))}</span></div><button type="button" class="btn${s===wz.datum?' primary':''}" data-wzin="${s}">${s===wz.datum?'Geselecteerd':'Ruil zoeken'}</button></div>`).join('')}</div></div>`;
+    <div class="plist">${inV.map(([s,a])=>`<div class="prow wzrij${s===wz.datum?' on':''}" data-wzrij="${s}" role="button" tabindex="0" aria-label="Ruil zoeken voor ${esc(fmtLang(s))}"><div><b>${esc(fmtLang(s))}</b><span>${esc(wn(a))}</span></div><button type="button" class="btn${s===wz.datum?' primary':''}" data-wzin="${s}">${s===wz.datum?'Geselecteerd':'Ruil zoeken'}</button></div>`).join('')}</div></div>`;
   else if(wz.p&&eig.length) vw=`<p class="muted" style="margin:0;font-size:.88rem">Geen wachten van ${esc(wz.p)} tijdens verlof.</p>`;
   const wo=!!window.WISSEL_ONLY;
   let h=(wo?`<div class="panel ikblok"><div class="phead"><h2>Wie ben je?</h2></div><div class="eb" style="padding:14px 16px;display:grid;gap:8px">
@@ -3652,7 +3656,8 @@ function renderWissel(){
   const mb=document.getElementById('wzMode'); if(mb) mb.onclick=()=>{collegaPreview=!collega; setCollega(!collega)};
   document.getElementById('wzP')?.addEventListener('change',e=>{wz.p=e.target.value; wz.datum=''; rer()});
   document.getElementById('wzD')?.addEventListener('change',e=>{wz.datum=e.target.value; rer()});
-  el.querySelectorAll('[data-wzin]').forEach(b=>b.onclick=()=>{wz.datum=b.dataset.wzin; rer(); const t=document.querySelector('#v-wissel .sugg,#v-wissel h4.lbl:last-of-type'); if(t) t.scrollIntoView({behavior:'smooth',block:'start'})});
+  const kiesVw=d=>{wz.datum=d; rer(); const t=document.querySelector('#v-wissel .sugg,#v-wissel h4.lbl:last-of-type'); if(t) t.scrollIntoView({behavior:'smooth',block:'start'})};
+  el.querySelectorAll('[data-wzrij]').forEach(r=>{r.onclick=()=>kiesVw(r.dataset.wzrij); r.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault(); kiesVw(r.dataset.wzrij)}}});
   document.getElementById('wzZ')?.addEventListener('change',e=>{wz.zelfde=e.target.value; rer()});
   document.getElementById('wzV')?.addEventListener('change',e=>{wz.venster=e.target.value==='jaar'?'jaar':+e.target.value; rer()});
   bindWzMail();
@@ -3720,6 +3725,7 @@ function rondVerlofweek(p,s){const {y,m,d}=dOf(s); const w=wdOf(y,m,d);
 if(window.WISSEL_ONLY){
   const _setTab=setTab;
   setTab=function(){ _setTab('wissel') };
+  collegaNav=function(){ const n=document.getElementById('cnav'); if(n) n.remove() };
   setCollega=function(){ collega=true; document.body.classList.add('collega'); canWrite=false; _setTab('wissel') };
   setTimeout(()=>{
     document.body.classList.add('wisselonly'); collega=true; canWrite=false;
