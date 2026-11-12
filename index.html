@@ -354,6 +354,10 @@ body.wisselonly header .bar>*:not(#thema){display:none!important}
 .wzrij:hover,.wzrij:focus-visible{border-color:var(--accent);outline:none}
 body.wisselonly #cnav{display:none!important}
 body.wisselonly{padding-bottom:0!important}
+.vermijd{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:.9rem}
+.vchip{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:99px;padding:3px 10px;cursor:pointer;user-select:none}
+.vchip input{margin:0;accent-color:var(--bad)}
+.vchip.on{border-color:var(--bad);background:var(--bad-soft);color:var(--bad);text-decoration:line-through}
 
 </style>
 <style>
@@ -3621,6 +3625,9 @@ function bindWzMail(){
   const cp=document.getElementById('wzCopy'); if(cp) cp.onclick=async()=>{try{await navigator.clipboard.writeText(document.getElementById('wzTxt').value); toast('Tekst gekopieerd.')}catch(e){toast('Kopiëren lukt niet in deze browser; selecteer de tekst zelf.','warn')}};
   const wi=document.getElementById('wzWis'); if(wi) wi.onclick=()=>{wz.sel=new Set(); renderWissel()};
 }
+// weekdagen waarop iemand liever geen (nieuwe) wacht krijgt; standaard geen, onthouden op dit toestel
+function vermijdVan(p){ if(!p) return []; try{const v=localStorage.getItem('ww-vermijd-'+p); if(v!==null) return JSON.parse(v)}catch(e){} return [] }
+function zetVermijd(p,lijst){ try{localStorage.setItem('ww-vermijd-'+p,JSON.stringify(lijst))}catch(e){} }
 function renderWissel(){
   const el=document.getElementById('v-wissel'); if(!el||el.hidden) return;
   const ps=R.filter(p=>!isExt(p)&&eigenWachten(p).length);
@@ -3631,7 +3638,9 @@ function renderWissel(){
   if(!eig.some(([s])=>s===wz.datum)) {wz.datum=inV[0]?inV[0][0]:(eig[0]?eig[0][0]:''); wz.res=null}
   if(wz.zelfde==='breder'&&!PROB.has(wachtOp(wz.p,wz.datum)||'')) {wz.zelfde='type'; wz.res=null}
   if(!wz.res&&wz.datum) wz.res=zoekWissels(wz.p,wz.datum,wz.venster,wz.zelfde);
-  const r=wz.res;
+  const WDK=['zo','ma','di','wo','do','vr','za'];
+  const vermijd=vermijdVan(wz.p);
+  const r=wz.res?{...wz.res,ruil:wz.res.ruil.filter(x=>!vermijd.includes(WDK[new Date(x.s2+'T12:00:00').getDay()]))}:null; const weg=wz.res?wz.res.ruil.length-r.ruil.length:0;
   let vw=''; if(inV.length) vw=`<div class="vwacht"><h4 class="lbl" style="margin:0">${collega&&wz.p===mijnIni?'Jouw wachten':'Wachten van '+esc(wz.p)} tijdens verlof (${inV.length})</h4><p class="muted" style="margin:0;font-size:.85rem">Deze wachten vallen in goedgekeurd verlof, of in het weekend rond een verlofweek. Zoek een ruil en spreek die af met je collega.</p>
     <div class="plist">${inV.map(([s,a])=>`<div class="prow wzrij${s===wz.datum?' on':''}" data-wzrij="${s}" role="button" tabindex="0" aria-label="Ruil zoeken voor ${esc(fmtLang(s))}"><div><b>${esc(fmtLang(s))}</b><span>${esc(wn(a))}</span></div><button type="button" class="btn${s===wz.datum?' primary':''}" data-wzin="${s}">${s===wz.datum?'Geselecteerd':'Ruil zoeken'}</button></div>`).join('')}</div></div>`;
   else if(wz.p&&eig.length) vw=`<p class="muted" style="margin:0;font-size:.88rem">Geen wachten van ${esc(wz.p)} tijdens verlof.</p>`;
@@ -3641,7 +3650,8 @@ function renderWissel(){
       <p class="muted" style="margin:0;font-size:.85rem">Je keuze wordt op dit toestel onthouden. Daarna zie je je wachten tijdens verlof en de mogelijke ruilen.</p></div></div>`:'')+`<div class="panel"><div class="phead"><h2>Wachtwissel zoeken</h2>${!collega?`<button class="btn" id="wzMode">${collega?'Terug naar het beheer':'Bekijk zoals een collega'}</button>`:''}</div><div class="eb" style="padding:14px 16px;display:grid;gap:12px">${vw}
     <p class="muted" style="margin:0;font-size:.88rem">${wo?'Kies de wacht':'Kies je naam en de wacht'} die je wil wisselen. Je ziet met wie je kan ruilen en welke wacht je dan in ruil doet, rekening houdend met verlof, wie wachten doet en de minimale rust tussen twee wachten. Zo gaat je vraag enkel naar de collega's voor wie het past.</p>
     <div class="bar">${wo?'':collega&&mijnIni&&ps.includes(mijnIni)?`<span class="muted">Jouw</span>`:`<label for="wzP">Collega</label>${selX('wzP',ps.map(p=>[p,p]),wz.p)}`}<label for="wzD">wacht</label>${selX('wzD',eig.map(([s,a])=>[s,`${fmtW(s)}/${dOf(s).y} · ${wn(a)}${inVs.has(s)?' · in verlof':''}`]),wz.datum)}
-      <label for="wzZ">ruilen tegen</label>${selX('wzZ',[['code','dezelfde wacht'],['type','hetzelfde soort wacht'],...(PROB.has(wachtOp(wz.p,wz.datum)||'')?[['breder','breder: ook andere Genk- en ZMK-weekendwachten']]:[])],wz.zelfde)}<label for="wzV">zoeken in</label>${selX('wzV',[['jaar','het hele kalenderjaar'],[2,'2 weken'],[4,'4 weken'],[6,'6 weken'],[10,'10 weken']],wz.venster)}</div>`;
+      <label for="wzZ">ruilen tegen</label>${selX('wzZ',[['code','dezelfde wacht'],['type','hetzelfde soort wacht'],...(PROB.has(wachtOp(wz.p,wz.datum)||'')?[['breder','breder: ook andere Genk- en ZMK-weekendwachten']]:[])],wz.zelfde)}<label for="wzV">zoeken in</label>${selX('wzV',[['jaar','het hele kalenderjaar'],[2,'2 weken'],[4,'4 weken'],[6,'6 weken'],[10,'10 weken']],wz.venster)}</div>
+    ${wz.p?`<div class="vermijd" role="group" aria-label="Geen nieuwe wacht op"><span class="muted">Geen nieuwe wacht op</span>${['ma','di','wo','do','vr','za','zo'].map(w=>`<label class="vchip${vermijd.includes(w)?' on':''}"><input type="checkbox" data-vmd="${w}"${vermijd.includes(w)?' checked':''}>${w}</label>`).join('')}${weg?`<span class="muted" style="font-size:.82rem">${weg} ${weg===1?'voorstel':'voorstellen'} verborgen</span>`:''}</div>`:''}`;
   if(!ps.length) h+=`<p class="muted" style="margin:0">Er staan nog geen toekomstige wachten in het rooster.</p>`;
 
   if(r){
@@ -3661,6 +3671,7 @@ function renderWissel(){
   document.getElementById('wzZ')?.addEventListener('change',e=>{wz.zelfde=e.target.value; rer()});
   document.getElementById('wzV')?.addEventListener('change',e=>{wz.venster=e.target.value==='jaar'?'jaar':+e.target.value; rer()});
   bindWzMail();
+  el.querySelectorAll('[data-vmd]').forEach(c=>c.onchange=()=>{const v=new Set(vermijdVan(wz.p)); if(c.checked) v.add(c.dataset.vmd); else v.delete(c.dataset.vmd); zetVermijd(wz.p,[...v]); wz.sel=new Set(); renderWissel()});
   const al=document.getElementById('wzAlle'); if(al) al.onchange=()=>{const keys=r.ruil.slice(0,100).map(x=>x.q+'|'+x.s2); keys.forEach(k=>al.checked?wz.sel.add(k):wz.sel.delete(k));
     el.querySelectorAll('.sugg .wzchk').forEach(c=>{c.checked=al.checked; c.closest('.sugg').classList.toggle('on',al.checked)}); const mb=document.getElementById('wzMail'); if(mb){mb.innerHTML=wzMailHtml(r); bindWzMail()}};
   el.querySelectorAll('.sugg .wzchk').forEach(c=>c.onchange=()=>{const k=c.dataset.wzs; if(c.checked) wz.sel.add(k); else wz.sel.delete(k); c.closest('.sugg')?.classList.toggle('on',c.checked); if(al) al.checked=r.ruil.slice(0,100).every(x=>wz.sel.has(x.q+'|'+x.s2));
